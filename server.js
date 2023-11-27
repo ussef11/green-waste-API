@@ -76,7 +76,7 @@ app.post('/api/insertData', async (req, res) => {
 
     const codedata = await getcode(deviceid)
     const  device =  codedata.rows[0].deviceid
-    console.log( "ddddddd" , device)
+    console.log( "device id" , device)
       
     const insertQuery = 'INSERT INTO public.dv (deviceid, devicetime  , lat , lon) VALUES ($1, $2, $3 , $4)';
     const values = [device, createddate, lat , lng];
@@ -99,7 +99,7 @@ app.post('/api/inertvention', async (req, res) => {
     const  device =  codedata.rows[0].deviceid
 
     const nature  =  "appel"
-    console.log( "device :" , device)
+    console.log( "device id:" , device)
 
       
     const insertQuery = 'INSERT INTO public.intervention (deviceid, devicetime  , lat , lon , nature) VALUES ($1, $2, $3 , $4 ,$5)';
