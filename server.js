@@ -42,10 +42,10 @@ var corsOptions = {
 };
 
 app.use(cors(corsOptions));
-// parse requests of content-type - application/json
+
 app.use(express.json());
 
-// parse requests of content-type - application/x-www-form-urlencoded
+
 app.use(express.urlencoded({ extended: true }));
 
 app.use(express.json());
@@ -54,12 +54,32 @@ app.get("/", (req, res) => {
   res.json({ message: "Welcome to Ussef application." });
 });
 
+
+const getcode =  async (id)=>{
+  const selectQuery = 'SELECT * FROM public."NFC"  where "CODETABLLETE" = $1  ';
+  const values = [id]
+  const result = await pool.query(selectQuery ,values);
+  return result
+}
+
+
+// id SERIAL,
+// deviceid INTEGER NOT NULL,
+// devicetime TIMESTAMP(0) WITHOUT TIME ZONE NOT NULL,
+// lat DOUBLE PRECISION,
+// lon DOUBLE PRECISION,
+
+
 app.post('/api/insertData', async (req, res) => {
   try {
     const { deviceid, lat , lng  , createddate} = req.body; 
 
-    const insertQuery = 'INSERT INTO public.nfc (devicename, lat , lng , createddate) VALUES ($1, $2, $3 , $4)';
-    const values = [deviceid, lat, lng , createddate];
+    const codedata = await getcode(deviceid)
+    const  device =  codedata.rows[0].deviceid
+    console.log( "ddddddd" , device)
+      
+    const insertQuery = 'INSERT INTO public.dv (deviceid, devicetime  , lat , lon) VALUES ($1, $2, $3 , $4)';
+    const values = [device, createddate, lat , lng];
 
     await pool.query(insertQuery, values);
 
@@ -69,12 +89,21 @@ app.post('/api/insertData', async (req, res) => {
     res.status(404).json({ success: false, message: 'Internal server error' });
   }
 });
+
+
 app.post('/api/inertvention', async (req, res) => {
   try {
     const { deviceid, lat , lng  , createddate} = req.body; 
 
-    const insertQuery = 'INSERT INTO public.intervention (devicename, lat , lng , createdate) VALUES ($1, $2, $3 , $4)';
-    const values = [deviceid, lat, lng , createddate];
+    const codedata = await getcode(deviceid)
+    const  device =  codedata.rows[0].deviceid
+
+    const nature  =  "appel"
+    console.log( "device :" , device)
+
+      
+    const insertQuery = 'INSERT INTO public.intervention (deviceid, devicetime  , lat , lon , nature) VALUES ($1, $2, $3 , $4 ,$5)';
+    const values = [device, createddate, lat , lng ,nature];
 
     await pool.query(insertQuery, values);
 
