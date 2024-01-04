@@ -33,7 +33,7 @@ const pool = new Pool({
   }
 })();
 
-const port = process.env.port || 5000;
+const port = 5000;
 
 var corsOptions = {
   origin: "*",
@@ -167,6 +167,35 @@ app.post("/api/getnearlypoint", async (req, res) => {
   }
 });
 
+app.post("/api/circuitdata", async (req, res) => {
+  try {
+    const { deviceid , datej, cid} = req.body;
+    const insertQuery = `
+    select  
+    p.deviceid as id ,
+    p.idcircuit as circuitid,
+    p.datej as datej,
+    p.hdeb as hdeb,
+    p.hfin as hfin,
+    st_AsText(routes.geom) as geom,
+    circuits."NOM" as name
+    from  
+    public."CIRCUIT" as circuits
+    INNER JOIN public."CIRCUIT_DET2" ON (circuits."IDCIRCUIT" = public."CIRCUIT_DET2".idcircuit)
+    INNER JOIN public.routes as  routes ON (public."CIRCUIT_DET2".idroutes= routes.ogc_fid) 
+    inner join public.planning p on ( circuits."IDCIRCUIT" =  p.idcircuit) inner join public.devices devices  on( p.deviceid  = devices.id )  where 
+    p.deviceid = $1 and  p.datej =  $2 and  p.idcircuit = $3
+                      `;
+    const value = [deviceid , datej, cid];
+
+    const result = await pool.query(insertQuery, value);
+    res.status(200).json(result.rows);
+  } catch (err) {
+    console.error("Error executing query:", err);
+    res.status(404).json({ success: false, message: "Internal server error" });
+  }
+});
+
 
 
 
@@ -183,6 +212,6 @@ app.post("/api/getnearlypoint", async (req, res) => {
 //   }
 // });
 
-// app.listen(port, () => {
-//   console.log(`Server is running in Port :${port}`);
-// });
+app.listen(port, () => {
+  console.log(`Server is running in Port :${port}`);
+});
