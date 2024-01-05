@@ -52,7 +52,7 @@ app.get("/", (req, res) => {
 });
 
 const getcode = async id => {
-  const selectQuery = 'SELECT * FROM public."NFC"  where "CODETABLLETE" = $1  ';
+  const selectQuery = 'SELECT * FROM public."NFC"  where  imei = $1  ';
   const values = [id];
   const result = await pool.query(selectQuery, values);
   return result;
@@ -68,13 +68,13 @@ app.post("/api/insertData", async (req, res) => {
   try {
     const { deviceid, lat, lng, createddate, username, phone } = req.body;
 
-    //const codedata = await getcode(deviceid)
-    ////const  device =  codedata.rows[0].deviceid
-    //console.log( "device id" , device)
+    const codedata = await getcode(deviceid)
+    const  device =  codedata.rows[0].deviceid
+    console.log( "device id" , device)
 
     const insertQuery =
       "INSERT INTO public.dv (deviceid, devicetime  , lat , lon,username , phone) VALUES ($1, $2, $3 , $4  , $5 , $6)";
-    const values = [deviceid, createddate, lat, lng, username, phone];
+    const values = [device, createddate, lat, lng, username, phone];
 
     await pool.query(insertQuery, values);
 
@@ -91,15 +91,16 @@ app.post("/api/inertvention", async (req, res) => {
   try {
     const { deviceid, lat, lng, createddate, username, phone } = req.body;
 
-    // const codedata = await getcode(deviceid)
-    // const  device =  codedata.rows[0].deviceid
+    const codedata = await getcode(deviceid)
+    const  device =  codedata.rows[0].deviceid
+    console.log( "device id" , device)
 
     const nature = "appel";
-    //console.log( "device id:" , device)
+   
 
     const insertQuery =
       "INSERT INTO public.intervention (deviceid, devicetime  , lat , lon , nature , username , phone) VALUES ($1, $2, $3 , $4 ,$5 , $6 , $7)";
-    const values = [deviceid, createddate, lat, lng, nature, username, phone];
+    const values = [device, createddate, lat, lng, nature, username, phone];
 
     await pool.query(insertQuery, values);
 
