@@ -138,6 +138,36 @@ app.post("/api/getbac", async (req, res) => {
     res.status(404).json({ success: false, message: "Internal server error" });
   }
 });
+app.post("/api/getbac", async (req, res) => {
+  try {
+    const { cid , lat , lng } = req.body;
+    const insertQuery = `
+SELECT 
+bac.latitude,
+bac.longitude,
+bac.typeb,
+"STR1"
+FROM
+public."CIRCUIT"
+INNER JOIN public."CIRCUIT_DET2" ON (public."CIRCUIT"."IDCIRCUIT" = public."CIRCUIT_DET2".idcircuit)
+INNER JOIN public.routes ON (public."CIRCUIT_DET2".idroutes = public.routes.ogc_fid)
+INNER JOIN public.bacs bac ON ST_DWithin(public.routes.geom, ST_SetSRID(ST_MakePoint(bac.longitude, bac.latitude), 4326), 0.00015)
+INNER JOIN public."PARAM" pb ON (bac.typeb = pb."INTIT")
+WHERE
+public."CIRCUIT"."IDCIRCUIT" = $1
+ORDER BY
+ST_Distance(public.routes.geom, ST_SetSRID(ST_MakePoint($2, $3 ), 4326))
+LIMIT 15;
+                      `;
+    const value = [cid, lng ,lat ];
+
+    const result = await pool.query(insertQuery, value);
+    res.status(200).json(result.rows);
+  } catch (err) {
+    console.error("Error executing query:", err);
+    res.status(404).json({ success: false, message: "Internal server error" });
+  }
+});
 
 app.post("/api/getnearlypoint", async (req, res) => {
   try {
