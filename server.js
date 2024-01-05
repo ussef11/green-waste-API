@@ -138,7 +138,7 @@ app.post("/api/getbac", async (req, res) => {
     res.status(404).json({ success: false, message: "Internal server error" });
   }
 });
-app.post("/api/getbac", async (req, res) => {
+app.post("/api/getnbac", async (req, res) => {
   try {
     const { cid , lat , lng } = req.body;
     const insertQuery = `
