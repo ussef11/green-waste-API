@@ -33,6 +33,30 @@ const pool = new Pool({
   }
 })();
 
+
+const pool2  = new Pool({
+  user: process.env.USER,
+  host: process.env.THOST,
+  database: process.env.DATABASE,
+  password: process.env.PASSWORD,
+  port: process.env.PORT,
+});
+
+(async () => {
+  const client = await pool.connect();
+  try {
+    const { rows } = await client.query("SELECT current_user");
+    const currentUser = rows[0]["current_user"];
+    console.log(process.env.THOST+ " " +currentUser);
+  } catch (err) {
+    console.error("Error executing query:", err);
+  } finally {
+    client.release();
+  }
+})();
+
+
+
 const port = 5000;
 
 var corsOptions = {
@@ -52,9 +76,9 @@ app.get("/", (req, res) => {
 });
 
 const getcode = async id => {
-  const selectQuery = 'SELECT * FROM public."NFC"  where  imei = $1  ';
+  const selectQuery = 'SELECT * FROM public."NFC"  where   identifiant = $1  ';
   const values = [id];
-  const result = await pool.query(selectQuery, values);
+  const result = await pool2.query(selectQuery, values);
   return result;
 };
 
@@ -76,7 +100,7 @@ app.post("/api/insertData", async (req, res) => {
       "INSERT INTO public.dv (deviceid, devicetime  , lat , lon,username , phone) VALUES ($1, $2, $3 , $4  , $5 , $6)";
     const values = [device, createddate, lat, lng, username, phone];
 
-    await pool.query(insertQuery, values);
+    await pool2.query(insertQuery, values);
 
     res
       .status(200)
@@ -102,7 +126,7 @@ app.post("/api/inertvention", async (req, res) => {
       "INSERT INTO public.intervention (deviceid, devicetime  , lat , lon , nature , username , phone) VALUES ($1, $2, $3 , $4 ,$5 , $6 , $7)";
     const values = [device, createddate, lat, lng, nature, username, phone];
 
-    await pool.query(insertQuery, values);
+    await pool2.query(insertQuery, values);
 
     res
       .status(200)
@@ -113,56 +137,101 @@ app.post("/api/inertvention", async (req, res) => {
   }
 });
 
+
+
 app.post("/api/getbac", async (req, res) => {
   try {
     const { cid } = req.body;
+    // ******************* RABAT ***************************
+    // const insertQuery = `
+    //                 SELECT 
+    //                 bac.latitude,
+    //                 bac.longitude,
+    //                 bac.typeb,
+    //                 "STR1"
+    //                 FROM
+    //                 public."CIRCUIT"
+    //                 INNER JOIN public."CIRCUIT_DET2" ON (public."CIRCUIT"."IDCIRCUIT" = public."CIRCUIT_DET2".idcircuit)
+    //                 INNER JOIN public.routes ON (public."CIRCUIT_DET2".id_cirdet = public.routes.ogc_fid),
+    //                 public.bacs bac inner join public."PARAM" pb on ( bac.typeb  = pb."INTIT" )
+    //                 where st_dwithin(public.routes.geom, st_setsrid(st_makepoint(bac.longitude, bac.latitude), 4326), 0.00015)
+    //                 and  public."CIRCUIT"."IDCIRCUIT" = $1
+    //                   `;
+
+    // *******************  TANGER ***************************
     const insertQuery = `
-                    SELECT 
-                    bac.latitude,
-                    bac.longitude,
-                    bac.typeb,
-                    "STR1"
-                    FROM
-                    public."CIRCUIT"
-                    INNER JOIN public."CIRCUIT_DET2" ON (public."CIRCUIT"."IDCIRCUIT" = public."CIRCUIT_DET2".idcircuit)
-                    INNER JOIN public.routes ON (public."CIRCUIT_DET2".id_cirdet = public.routes.ogc_fid),
-                    public.bacs bac inner join public."PARAM" pb on ( bac.typeb  = pb."INTIT" )
-                    where st_dwithin(public.routes.geom, st_setsrid(st_makepoint(bac.longitude, bac.latitude), 4326), 0.00015)
-                    and  public."CIRCUIT"."IDCIRCUIT" = $1
+              SELECT 
+              bac.latitude,
+              bac.longitude,
+              bac.typeb,
+              "STR1"
+              FROM
+              public."CIRCUIT"
+              INNER JOIN public."CIRCUIT_DET2" ON (public."CIRCUIT"."IDCIRCUIT" = public."CIRCUIT_DET2".idcircuit)
+              INNER JOIN public.bacs bac ON ST_DWithin(public."CIRCUIT_DET2".geom, ST_SetSRID(ST_MakePoint(bac.longitude, bac.latitude), 4326), 0.00015)
+              INNER JOIN public."PARAM" pb ON (bac.typeb = pb."INTIT")
+              WHERE
+              public."CIRCUIT"."IDCIRCUIT" =  $1
                       `;
     const value = [cid];
 
-    const result = await pool.query(insertQuery, value);
+    const result = await pool2.query(insertQuery, value);
     res.status(200).json(result.rows);
   } catch (err) {
     console.error("Error executing query:", err);
     res.status(404).json({ success: false, message: "Internal server error" });
   }
 });
+
+
+
+
 app.post("/api/getnbac", async (req, res) => {
   try {
     const { cid , lat , lng } = req.body;
+    //*********************RABAT***********************
+//     const insertQuery = `
+// SELECT 
+// bac.latitude,
+// bac.longitude,
+// bac.typeb,
+// "STR1"
+// FROM
+// public."CIRCUIT"
+// INNER JOIN public."CIRCUIT_DET2" ON (public."CIRCUIT"."IDCIRCUIT" = public."CIRCUIT_DET2".idcircuit)
+// INNER JOIN public.routes ON (public."CIRCUIT_DET2".idroutes = public.routes.ogc_fid)
+// INNER JOIN public.bacs bac ON ST_DWithin(public.routes.geom, ST_SetSRID(ST_MakePoint(bac.longitude, bac.latitude), 4326), 0.00015)
+// INNER JOIN public."PARAM" pb ON (bac.typeb = pb."INTIT")
+// WHERE
+// public."CIRCUIT"."IDCIRCUIT" = $1
+// ORDER BY
+// ST_Distance(public.routes.geom, ST_SetSRID(ST_MakePoint($2, $3 ), 4326))
+// LIMIT 15;
+//                       `;
+
+// ****************TANGER**********************
     const insertQuery = `
-SELECT 
-bac.latitude,
-bac.longitude,
-bac.typeb,
-"STR1"
-FROM
-public."CIRCUIT"
-INNER JOIN public."CIRCUIT_DET2" ON (public."CIRCUIT"."IDCIRCUIT" = public."CIRCUIT_DET2".idcircuit)
-INNER JOIN public.routes ON (public."CIRCUIT_DET2".idroutes = public.routes.ogc_fid)
-INNER JOIN public.bacs bac ON ST_DWithin(public.routes.geom, ST_SetSRID(ST_MakePoint(bac.longitude, bac.latitude), 4326), 0.00015)
-INNER JOIN public."PARAM" pb ON (bac.typeb = pb."INTIT")
-WHERE
-public."CIRCUIT"."IDCIRCUIT" = $1
-ORDER BY
-ST_Distance(public.routes.geom, ST_SetSRID(ST_MakePoint($2, $3 ), 4326))
-LIMIT 15;
+    SELECT 
+    bac.latitude,
+    bac.longitude,
+    bac.typeb,
+    "STR1"
+    FROM
+    public."CIRCUIT"
+    INNER JOIN public."CIRCUIT_DET2" ON (public."CIRCUIT"."IDCIRCUIT" = public."CIRCUIT_DET2".idcircuit)
+    INNER JOIN public.bacs bac ON ST_DWithin(public."CIRCUIT_DET2".geom, ST_SetSRID(ST_MakePoint(bac.longitude, bac.latitude), 4326), 0.00015)
+    INNER JOIN public."PARAM" pb ON (bac.typeb = pb."INTIT")
+    WHERE
+    public."CIRCUIT"."IDCIRCUIT" = $1
+    ORDER BY
+    ST_Distance(public."CIRCUIT_DET2".geom, ST_SetSRID(ST_MakePoint($2, $3), 4326))
+    LIMIT 15;
                       `;
+
+
     const value = [cid, lng ,lat ];
 
-    const result = await pool.query(insertQuery, value);
+    const result = await pool2.query(insertQuery, value);
     res.status(200).json(result.rows);
   } catch (err) {
     console.error("Error executing query:", err);
@@ -173,24 +242,41 @@ LIMIT 15;
 app.post("/api/getnearlypoint", async (req, res) => {
   try {
     const { cid  , lat , lng } = req.body;
-    const insertQuery = `
-        SELECT
-        ST_Distance(routes.geom::geography, ST_SetSRID(ST_MakePoint( $1 , $2), 4326)::geography) as distance,
+       //*********************RABAT***********************
+      //  const insertQuery = `
+      //      SELECT
+      //      ST_Distance(routes.geom::geography, ST_SetSRID(ST_MakePoint( $1 , $2), 4326)::geography) as distance,
+      //      circuits."NOM" as name,
+      //      ST_X(ST_ClosestPoint(routes.geom, ST_SetSRID(ST_MakePoint(  $1 , $2), 4326))) AS longitude ,
+      //      ST_Y(ST_ClosestPoint(routes.geom, ST_SetSRID(ST_MakePoint(  $1 , $2), 4326))) AS latitude 
+      //      FROM
+      //      public."CIRCUIT" as circuits
+      //      INNER JOIN public."CIRCUIT_DET2" ON (circuits."IDCIRCUIT" = public."CIRCUIT_DET2".idcircuit)
+      //      INNER JOIN public.routes as  routes ON (public."CIRCUIT_DET2".idroutes= routes.ogc_fid)
+      //      WHERE  circuits."IDCIRCUIT" = $3
+      //      ORDER BY
+      //      ST_Distance(routes.geom::geography, ST_SetSRID(ST_MakePoint( $1 , $2), 4326)::geography)
+      //      LIMIT 1;
+      //                    `;
+
+// ****************TANGER**********************
+       const insertQuery = `
+       SELECT
+        ST_Distance(public."CIRCUIT_DET2".geom::geography, ST_SetSRID(ST_MakePoint( $1 , $2), 4326)::geography) as distance,
         circuits."NOM" as name,
-        ST_X(ST_ClosestPoint(routes.geom, ST_SetSRID(ST_MakePoint(  $1 , $2), 4326))) AS longitude ,
-        ST_Y(ST_ClosestPoint(routes.geom, ST_SetSRID(ST_MakePoint(  $1 , $2), 4326))) AS latitude 
+        ST_X(ST_ClosestPoint(public."CIRCUIT_DET2".geom, ST_SetSRID(ST_MakePoint( $1 , $2), 4326))) AS longitude ,
+        ST_Y(ST_ClosestPoint(public."CIRCUIT_DET2".geom, ST_SetSRID(ST_MakePoint( $1 , $2), 4326))) AS latitude 
         FROM
         public."CIRCUIT" as circuits
         INNER JOIN public."CIRCUIT_DET2" ON (circuits."IDCIRCUIT" = public."CIRCUIT_DET2".idcircuit)
-        INNER JOIN public.routes as  routes ON (public."CIRCUIT_DET2".idroutes= routes.ogc_fid)
         WHERE  circuits."IDCIRCUIT" = $3
         ORDER BY
-        ST_Distance(routes.geom::geography, ST_SetSRID(ST_MakePoint( $1 , $2), 4326)::geography)
+        ST_Distance(public."CIRCUIT_DET2".geom::geography, ST_SetSRID(ST_MakePoint( $1 , $2), 4326)::geography)
         LIMIT 1;
-                      `;
+           `;   
     const value = [lng , lat, cid];
 
-    const result = await pool.query(insertQuery, value);
+    const result = await pool2.query(insertQuery, value);
     res.status(200).json(result.rows);
   } catch (err) {
     console.error("Error executing query:", err);
@@ -201,25 +287,45 @@ app.post("/api/getnearlypoint", async (req, res) => {
 app.post("/api/circuitdata", async (req, res) => {
   try {
     const { deviceid , datej, cid} = req.body;
-    const insertQuery = `
-    select  
-    p.deviceid as id ,
-    p.idcircuit as circuitid,
-    p.datej as datej,
-    p.hdeb as hdeb,
-    p.hfin as hfin,
-    st_AsText(routes.geom) as geom,
-    circuits."NOM" as name
-    from  
-    public."CIRCUIT" as circuits
-    INNER JOIN public."CIRCUIT_DET2" ON (circuits."IDCIRCUIT" = public."CIRCUIT_DET2".idcircuit)
-    INNER JOIN public.routes as  routes ON (public."CIRCUIT_DET2".idroutes= routes.ogc_fid) 
-    inner join public.planning p on ( circuits."IDCIRCUIT" =  p.idcircuit) inner join public.devices devices  on( p.deviceid  = devices.id )  where 
-    p.deviceid = $1 and  p.datej =  $2 and  p.idcircuit = $3
-                      `;
+
+
+     //*********************RABAT***********************
+    //  const insertQuery = `
+    //  select  
+    //  p.deviceid as id ,
+    //  p.idcircuit as circuitid,
+    //  p.datej as datej,
+    //  p.hdeb as hdeb,
+    //  p.hfin as hfin,
+    //  st_AsText(routes.geom) as geom,
+    //  circuits."NOM" as name
+    //  from  
+    //  public."CIRCUIT" as circuits
+    //  INNER JOIN public."CIRCUIT_DET2" ON (circuits."IDCIRCUIT" = public."CIRCUIT_DET2".idcircuit)
+    //  INNER JOIN public.routes as  routes ON (public."CIRCUIT_DET2".idroutes= routes.ogc_fid) 
+    //  inner join public.planning p on ( circuits."IDCIRCUIT" =  p.idcircuit) inner join public.devices devices  on( p.deviceid  = devices.id )  where 
+    //  p.deviceid = $1 and  p.datej =  $2 and  p.idcircuit = $3
+    //                    `;
+// ****************TANGER**********************
+
+const insertQuery = `
+select  
+p.deviceid as id ,
+p.idcircuit as circuitid,
+p.datej as datej,
+p.hdeb as hdeb,
+p.hfin as hfin,
+st_AsText(public."CIRCUIT_DET2".geom) as geom,
+circuits."NOM" as name
+from  
+public."CIRCUIT" as circuits
+INNER JOIN public."CIRCUIT_DET2" ON (circuits."IDCIRCUIT" = public."CIRCUIT_DET2".idcircuit)
+inner join public.planning p on ( circuits."IDCIRCUIT" =  p.idcircuit) inner join public.devices devices  on( p.deviceid  = devices.id )  where 
+p.deviceid = $1 and  p.datej =  $2 and  p.idcircuit = $3
+                  `;
     const value = [deviceid , datej, cid];
 
-    const result = await pool.query(insertQuery, value);
+    const result = await pool2.query(insertQuery, value);
     res.status(200).json(result.rows);
   } catch (err) {
     console.error("Error executing query:", err);
